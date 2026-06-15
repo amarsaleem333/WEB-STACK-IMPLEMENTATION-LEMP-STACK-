@@ -1,133 +1,201 @@
-Part 1: Step-by-Step Project Execution & Screenshot Checklist
+Web Stack Implementation: LAMP Stack on AWS EC2
 
-As you run the commands on your EC2 instance (3.143.110.31), stop at the designated points below to capture your screenshots.
+This repository showcases the step-by-step deployment of a solid, production-ready LAMP (Linux, Apache, MySQL, PHP) web stack hosted on an Amazon Web Services (AWS) EC2 Virtual Machine.
 
-Step 0: AWS Infrastructure Setup
+Architecture Overview
 
-Launch EC2: Launch your t2.micro Ubuntu 24.04 instance.
+The LAMP stack consists of four open-source components arranged in layered tiers to serve dynamic web pages:
 
-Configure Security Group: Ensure Port 22 (SSH), Port 80 (HTTP), and Port 443 (HTTPS) are open to 0.0.0.0/0.
+Linux (Ubuntu 24.04 LTS): The foundational operating system layer.
 
-📸 https://github.com/amarsaleem333/WEB-STACK-IMPLEMENTATION-LEMP-STACK-/commit/b933d4bccfdbaef8e3f532a54f18de8799334152#diff-098d87542d1cefd1cea52fd5abaacee741bb3c5ec38c8d04a42d7b1ea003ec47 (Security Group Rules): * In your AWS Console, navigate to your EC2 Instance -> Security tab -> Click on your Security Group.
+Apache HTTP Server: The web server handling HTTP/HTTPS requests.
 
-Take a screenshot showing the Inbound Rules table (Ports 22, 80, 443 active).
+MySQL Database: The relational database storing system and user state.
 
-Save this image on your computer as: security-rules.png
+PHP: The backend scripting language processing dynamic code.
 
-Connect via SSH: Open your terminal (Git Bash, Mac Terminal, or Command Prompt) and run:
+Step 0: AWS Infrastructure Setup & Connection
 
-chmod 400 my-key.pem
-ssh -i "my-key.pem" ubuntu@3.143.110.31
+1. Instance Configuration
+
+Our server is provisioned with the following specifications in the AWS Console:
+
+Instance ID: i-09f22a985afd7a447
+
+Instance Type: t2.micro
+
+AMI: Ubuntu 24.04 LTS (HVM)
+
+Region: us-east-2 (Ohio)
+
+Public IPv4: 3.143.110.31
+
+Private IPv4: 172.31.16.168
+
+IMDSv2: Required (Session Token Authentication enforced)
+
+2. Network Security Group Configuration
+
+To allow inbound traffic, we configured our Security Group with the following firewall rules:
+
+Port 22 (SSH): Accessible from our administrative local IP for secure terminal operations.
+
+Port 80 (HTTP): Open to Anywhere (0.0.0.0/0) to allow web traffic.
+
+Port 443 (HTTPS): Open to Anywhere (0.0.0.0/0) for secure web traffic.
+
+Security Group Configuration:
+
+3. Establishing SSH Access
+
+From our local terminal, we set secure permissions on our private SSH key (project2.pem) and connected to the instance:
+
+# Secure the private key permissions
+chmod 400 project2.pem
+
+# Securely log into the instance
+ssh -i "project2.pem" ubuntu@3.143.110.31
 
 
+Step 1: Installing and Configuring the Apache Web Server
 
-Step 1: Install Apache
+With a live secure connection to the instance, we ran system package updates and installed Apache:
 
-Run the update and installation commands:
-
+# Update local repository cache and upgrade outdated packages
 sudo apt update && sudo apt upgrade -y
+
+# Install Apache Web Server
 sudo apt install apache2 -y
 
+# Enable Apache to run automatically on system boot
+sudo systemctl enable apache2
+sudo systemctl status apache2
 
 
-Open your web browser and go to http://3.143.110.31.
+Verification
 
-📸 https://github.com/amarsaleem333/WEB-STACK-IMPLEMENTATION-LEMP-STACK-/commit/b933d4bccfdbaef8e3f532a54f18de8799334152#diff-347d32017b411745cd6331b5cd25ebee13d1db1e2f5a78509bce49653984805b (Apache Default Page):
+We verified that the web server is reachable by running curl locally and visiting our public IP (http://3.143.110.31) in a browser:
 
-Take a screenshot of the "Apache2 Ubuntu Default Page" in your browser showing your server's IP address (3.143.110.31) in the URL bar.
+curl -I http://localhost:80
 
-Save this image on your computer as: apache-default.png
 
-Step 2: Install and Secure MySQL
+Apache Web Server Verification:
 
-Install the database server:
+Step 2: Installing and Securing the MySQL Database
 
+To store relational data for our applications, we deployed a MySQL server instance:
+
+# Install MySQL
 sudo apt install mysql-server -y
 
+# Verify running status
+sudo systemctl status mysql
 
 
-Secure your database by running:
+Hardening the Installation
 
+To protect the database from external threats and administrative vulnerabilities, we logged into the root command-line interface, defined a strong security password protocol, and ran the built-in interactive hardening utility:
+
+# Enter the MySQL command line as root
 sudo mysql
 
 
+Inside the database shell, we updated the authentication profile for the administrative root account:
 
-Update the root password inside the SQL command line (replace YourStrongPassword123$ with a password of your choice):
-
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrongPassword123$';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrongAdminPassword123$';
 exit;
 
 
-
-Run the security hardening script:
+We then executed the interactive shell wizard to secure the platform:
 
 sudo mysql_secure_installation
 
 
+We opted to remove anonymous users, disable remote administrative logins, drop test schema scopes, and flush the privileges index table.
 
-Follow the prompts to remove anonymous users, disable remote root logins, and reload privileges.
+Step 3: Installing PHP and Extensions
 
-Step 3: Install PHP
+To run script-driven backend software, we installed PHP along with two companion packages:
 
-Install PHP and its Apache/MySQL modules:
+libapache2-mod-php to let Apache process PHP files seamlessly.
+
+php-mysql to facilitate queries between PHP and MySQL.
 
 sudo apt install php libapache2-mod-php php-mysql -y
 
+# Confirm system version and compatibility
+php -v
 
 
-Step 4: Configure the Apache Virtual Host
+Step 4: Configuring an Isolated Apache Virtual Host
 
-Create your custom web directory and assign permissions:
+To keep web services organized, we configured a custom Virtual Host representing our project folder instead of using the default system path /var/www/html.
 
+1. File System Organization
+
+# Create a dedicated web directory
 sudo mkdir -p /var/www/project_web
+
+# Assign folder ownership to the active shell user
 sudo chown -R $USER:$USER /var/www/project_web
 
 
+2. Creating the Configuration File
 
-Create your configuration file:
+We created an Apache configuration profile to instruct the server to process incoming requests using our isolated web directory:
 
 sudo nano /etc/apache2/sites-available/project_web.conf
 
 
-
-Paste the virtual host configuration (Press Ctrl+O, Enter, and then Ctrl+X to save and exit in Nano):
+Inside the file, we defined the server parameters:
 
 <VirtualHost *:80>
     ServerName 3.143.110.31
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/project_web
-
+    
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 
 
+3. Activating the Virtual Host
 
-Enable the virtual host, disable the default layout, test configuration, and reload Apache:
-
+# Enable our custom site configuration
 sudo a2ensite project_web
+
+# Disable the default welcome profile
 sudo a2dissite 000-default
-sudo apache2ctl configtest  # Should return: Syntax OK
+
+# Verify syntax integrity
+sudo apache2ctl configtest
+
+# Restart Apache to apply the environment changes
 sudo systemctl reload apache2
 
 
+Step 5: Testing Dynamic PHP & Resolving the IMDSv2 Barrier
 
-Step 5: Test PHP Execution
+1. Dynamic PHP Script Test
 
-Create a dynamic test file in your new web root directory:
+To verify that our custom Apache Virtual Host executes PHP files, we wrote a test script:
 
 echo "<?php phpinfo(); ?>" > /var/www/project_web/index.php
 
 
+Visiting http://3.143.110.31/index.php displays our PHP configuration environment dashboard:
 
-In your browser, navigate to: http://3.143.110.31/index.php.
+Dynamic PHP Processor Verification:
 
-📸 https://github.com/amarsaleem333/WEB-STACK-IMPLEMENTATION-LEMP-STACK-/commit/b933d4bccfdbaef8e3f532a54f18de8799334152#diff-bdb784c5f31634f59bbb698030b6bbf709bfd3b6e47d24557ceb7a7d889e2d99 (PHP Info Page):
-
-Take a screenshot of the purple PHP info diagnostic page showing your public IP address in the URL bar.
-
-Save this image on your computer as: php-info.png
-
-Remove the test file for safety:
-
+⚠️ Important Security Note: Immediately after verification, delete this file to prevent exposing structural server details to public scanning bots:
 rm /var/www/project_web/index.php
+
+2. Resolving the IMDSv2 Restriction
+
+Because our instance enforces IMDSv2, using a plain curl to request internal instance data yields a 401 Unauthorized block. We resolved this by first requesting an authentication token:
+
+# Request a temporary metadata authorization token
+TOKEN=$(curl -s -X PUT "[http://169.254.169.254/latest/api/token](http://169.254.169.254/latest/api/token)" -H "X-aws-ec2-metadata-token-ttl-seconds: 360")
+
+# Access metadata securely using the token
+curl -s -H "X-aws-ec2-metadata-token: $TOKEN" [http://169.254.169.254/latest/meta-data/public-ipv4](http://169.254.169.254/latest/meta-data/public-ipv4)
